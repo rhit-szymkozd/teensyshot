@@ -48,15 +48,7 @@ uint8_t             ESCCMD_bufferTlm[ESCCMD_NB_UART][ESCCMD_TLM_LENGTH];
 //
 void ESCCMD_init( uint8_t n )  {
   static int i;
-
-  if ( ESCCMD_init_flag )
-    return;
-
-  if ( n <= ESCCMD_MAX_ESC )
-    ESCCMD_n = n;
-  else
-    ESCCMD_n = ESCCMD_MAX_ESC;
-
+  ESCCMD_n = n;
   // Initialize data arrays to zero
   for ( i = 0; i < ESCCMD_n; i++ ) {
     ESCCMD_state[i]       = 0;
@@ -88,16 +80,7 @@ void ESCCMD_init( uint8_t n )  {
 //  Return values: see defines
 //
 int ESCCMD_arm_all( void )  {
-  static int i, k;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if all the ESCs are in the initial state
-  for ( i = 0; i < ESCCMD_n; i++ )
-    if ( ESCCMD_state[i] & ESCCMD_STATE_ARMED )
-      ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
+  static int i;
 
   // Define stop command
   for ( i = 0; i < ESCCMD_n; i++ )  {
@@ -109,11 +92,7 @@ int ESCCMD_arm_all( void )  {
   for ( i = 0; i < ESCCMD_CMD_ARMING_REP; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    if ( DSHOT_send( ESCCMD_cmd, ESCCMD_tlm ) ) {
-      for ( k = 0; k < ESCCMD_n; k++ )
-        ESCCMD_last_error[k] = ESCCMD_ERROR_DSHOT;
-      return ESCCMD_ERROR_DSHOT;
-    }
+    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
 
     // Wait some time
     delayMicroseconds( 2 * ESCCMD_CMD_DELAY );
@@ -134,20 +113,6 @@ int ESCCMD_arm_all( void )  {
 int ESCCMD_3D_on( void )  {
   static int i, k;
 
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-  
-  // Check if timer is disabled
-  if ( ESCCMD_timer_flag )
-    return ESCCMD_ERROR_PARAM;
-
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    // Check if ESCs are stopped
-    if ( ESCCMD_state[i] & ESCCMD_STATE_START )
-      ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-  }
-
   // Define 3D on command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_3D_MODE_ON;
@@ -158,11 +123,7 @@ int ESCCMD_3D_on( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    if ( DSHOT_send( ESCCMD_cmd, ESCCMD_tlm ) ) {
-      for ( k = 0; k < ESCCMD_n; k++ )
-        ESCCMD_last_error[k] = ESCCMD_ERROR_DSHOT;
-      return ESCCMD_ERROR_DSHOT;
-    }
+    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -178,11 +139,7 @@ int ESCCMD_3D_on( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    if ( DSHOT_send( ESCCMD_cmd, ESCCMD_tlm ) ) {
-      for ( k = 0; k < ESCCMD_n; k++ )
-        ESCCMD_last_error[k] = ESCCMD_ERROR_DSHOT;
-      return ESCCMD_ERROR_DSHOT;
-    }
+    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -210,20 +167,6 @@ int ESCCMD_3D_on( void )  {
 int ESCCMD_3D_off( void )  {
   static int i, k;
 
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-  
-  // Check if timer is disabled
-  if ( ESCCMD_timer_flag )
-    return ESCCMD_ERROR_PARAM;
-
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    // Check if ESCs are stopped
-    if ( ESCCMD_state[i] & ESCCMD_STATE_START )
-      ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-  }
-
   // Define 3D off command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_3D_MODE_OFF;
@@ -234,11 +177,7 @@ int ESCCMD_3D_off( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    if ( DSHOT_send( ESCCMD_cmd, ESCCMD_tlm ) ) {
-      for ( k = 0; k < ESCCMD_n; k++ )
-        ESCCMD_last_error[k] = ESCCMD_ERROR_DSHOT;
-      return ESCCMD_ERROR_DSHOT;
-    }
+    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -254,11 +193,7 @@ int ESCCMD_3D_off( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    if ( DSHOT_send( ESCCMD_cmd, ESCCMD_tlm ) ) {
-      for ( k = 0; k < ESCCMD_n; k++ )
-        ESCCMD_last_error[k] = ESCCMD_ERROR_DSHOT;
-      return ESCCMD_ERROR_DSHOT;
-    }
+    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -285,25 +220,6 @@ int ESCCMD_3D_off( void )  {
 //
 int ESCCMD_start_timer( void )  {
   static int i;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if timer already started
-  if ( ESCCMD_timer_flag )
-    return ESCCMD_ERROR_SEQ;
-
-  // Checks
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    // Check if all the ESCs are armed
-    if ( !( ESCCMD_state[i] & ESCCMD_STATE_ARMED ) )
-      ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-    // Check if ESCs are stopped
-    if ( ESCCMD_state[i] & ESCCMD_STATE_START )
-      ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-  }
 
   // Initialize ESC structure and clear UART input buffer
   for ( i = 0; i < ESCCMD_n; i++ )  {
@@ -335,14 +251,6 @@ int ESCCMD_start_timer( void )  {
 int ESCCMD_stop_timer( void )  {
   static int i;
 
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    return ESCCMD_ERROR_SEQ;
-
   // Stop timer
   ESCCMD_timer.end();
   ESCCMD_timer_flag = 0;
@@ -364,18 +272,6 @@ int ESCCMD_stop_timer( void )  {
 //
 int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
   static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
 
   // Define a local copy of the state
   noInterrupts();
@@ -439,18 +335,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
 int ESCCMD_stop( uint8_t i ) {
   static uint8_t local_state;
 
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
   // Define a local copy of the state
   noInterrupts();
   local_state = ESCCMD_state[i];
@@ -475,289 +359,6 @@ int ESCCMD_stop( uint8_t i ) {
 }
 
 //
-//  Return last error code of motor number i
-//
-int ESCCMD_read_err( uint8_t i, int8_t *err )  {
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-
-  // Return error code
-  *err = ESCCMD_last_error[i];
-  
-  // Clear error
-  ESCCMD_last_error[i] = 0;
-
-  return 0;
-}
-
-//
-//  Return last command code of motor number i
-//
-int ESCCMD_read_cmd( uint8_t i, uint16_t *cmd )  {
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-
-
-  *cmd = ESCCMD_cmd[i];
-
-  return 0;
-}
-
-//
-//  Read telemetry status of ESC number i
-//
-int ESCCMD_read_tlm_status( uint8_t i )  {
-  static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
-  // Define a local copy of the state
-  noInterrupts();
-  local_state = ESCCMD_state[i];
-  interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-  // Check if telemetry is valid and active
-  if ( ESCCMD_tlm_valid[i] && ESCCMD_tlm[i] )  {
-    return 0;
-  }
-  else
-    return ESCCMD_ERROR_TLM_INVAL;
-}
-
-//
-//  Read temperature of motor number i
-//  Unit is degree Celsius
-//
-int ESCCMD_read_deg( uint8_t i, uint8_t *deg )  {
-  static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
-  // Define a local copy of the state
-  noInterrupts();
-  local_state = ESCCMD_state[i];
-  interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-  // Check if telemetry is valid
-  if ( ESCCMD_tlm_valid[i] )  {
-    *deg = ESCCMD_tlm_deg[i];
-  }
-  else
-    return ESCCMD_ERROR_TLM_INVAL;
-
-  return 0;
-}
-
-//
-//  Read dc power supply voltage of motor number i
-//  Unit is Volt
-//
-int ESCCMD_read_volt( uint8_t i, uint16_t *volt )  {
-  static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
-  // Define a local copy of the state
-  noInterrupts();
-  local_state = ESCCMD_state[i];
-  interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-  // Check if telemetry is valid
-  if ( ESCCMD_tlm_valid[i] )  {
-    *volt = ESCCMD_tlm_volt[i];
-  }
-  else
-    return ESCCMD_ERROR_TLM_INVAL;
-
-  return 0;
-}
-
-//
-//  Read current of motor number i
-//  Unit is Ampere
-//
-int ESCCMD_read_amp( uint8_t i, uint16_t *amp )  {
-  static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
-  // Define a local copy of the state
-  noInterrupts();
-  local_state = ESCCMD_state[i];
-  interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-  // Check if telemetry is valid
-  if ( ESCCMD_tlm_valid[i] )  {
-    *amp = ESCCMD_tlm_amp[i];
-  }
-  else
-    return ESCCMD_ERROR_TLM_INVAL;
-
-  return 0;
-}
-
-//
-//  Read consumption of motor number i
-//  Unit is milli Ampere.hour
-//
-int ESCCMD_read_mah( uint8_t i, uint16_t *mah )  {
-  static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
-  // Define a local copy of the state
-  noInterrupts();
-  local_state = ESCCMD_state[i];
-  interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-  // Check if telemetry is valid
-  if ( ESCCMD_tlm_valid[i] )  {
-    *mah = ESCCMD_tlm_mah[i];
-  }
-  else
-    return ESCCMD_ERROR_TLM_INVAL;
-
-  return 0;
-}
-
-//
-//  Read shaft rotational velocity of motor number i
-//  Unit is round per minute
-//  The sign of the measurement depends on the last throttle sign
-//
-int ESCCMD_read_rpm( uint8_t i, int16_t *rpm )  {
-  static uint8_t local_state;
-
-  // Check if everything is initialized
-  if ( !ESCCMD_init_flag )
-    return ESCCMD_ERROR_INIT;
-
-  // Check if motor is within range
-  if ( i >= ESCCMD_n )
-    return ESCCMD_ERROR_PARAM;
-  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ );
-
-  // Define a local copy of the state
-  noInterrupts();
-  local_state = ESCCMD_state[i];
-  interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
-  // Check if telemetry is valid
-  if ( ESCCMD_tlm_valid[i] )  {
-    // Check current mode
-    if ( local_state & ESCCMD_STATE_3D )  {
-      // 3D mode
-      // 48 - 1047    : positive direction (48 slowest)
-      // 1048 - 2047  : negative direction (1048 slowest)
-      if ( ESCCMD_cmd[i] > DSHOT_CMD_MAX + 1 + ESCCMD_MAX_3D_THROTTLE )
-        *rpm = -ESCCMD_tlm_rpm[i];  // 3D mode negative direction
-      else
-        *rpm = ESCCMD_tlm_rpm[i];   // 3D mode positive direction
-    }
-    else {
-      // Default mode
-      *rpm = ESCCMD_tlm_rpm[i];
-    }
-    
-    // Convert electrical rpm * 100 into motor rpm * 10
-    *rpm = ( *rpm * 10 * 2 ) / ESCCMD_TLM_NB_POLES;
-  }
-  else
-    return ESCCMD_ERROR_TLM_INVAL;
-
-  return 0;
-}
-
-//
 //  This routine should be called within the main loop
 //  Returns ESCCMD_TIC_OCCURED when a tic occurs, 
 //  Return 0 otherwise.
@@ -766,10 +367,6 @@ int ESCCMD_tic( void )  {
   static int      i;
   static uint16_t local_tic_pend;
  
-  // Check if timer started
-  if ( !ESCCMD_timer_flag ) {
-    return 0;
-  }
   //// Process clock tics
   noInterrupts();
   local_tic_pend = ESCCMD_tic_pend;
@@ -829,24 +426,7 @@ int ESCCMD_tic( void )  {
     }
 
     // Send current command
-    if ( DSHOT_send( ESCCMD_cmd, ESCCMD_tlm ) ) {
-      for ( i = 0; i < ESCCMD_n; i++ )  {
-        ESCCMD_last_error[i] = ESCCMD_ERROR_DSHOT;
-      }
-    }
-    else  {
-      delayMicroseconds( ESCCMD_CMD_DELAY );
-  
-      // Update telemetry packet pending counter
-      for ( i = 0; i < ESCCMD_n; i++ )  {
-        if ( ESCCMD_tlm[i] )  {
-          ESCCMD_tlm_pend[i]++;
-          #ifdef ESCCMD_ESC_EMULATION
-          ESCCMD_emulate_tlm( i );
-          #endif
-        }
-      }
-    }
+    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
     
     // Inform caller that a clock tic occured
     return ESCCMD_TIC_OCCURED;
