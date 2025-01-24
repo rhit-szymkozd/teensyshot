@@ -111,7 +111,7 @@ int ESCCMD_arm_all( void )  {
 //  Return values: see defines
 //
 int ESCCMD_3D_on( void )  {
-  static int i, k;
+  static int i;
 
   // Define 3D on command
   for ( i = 0; i < ESCCMD_n; i++ )  {
@@ -165,7 +165,7 @@ int ESCCMD_3D_on( void )  {
 //  Return values: see defines
 //
 int ESCCMD_3D_off( void )  {
-  static int i, k;
+  static int i;
 
   // Define 3D off command
   for ( i = 0; i < ESCCMD_n; i++ )  {
@@ -278,16 +278,8 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
   local_state = ESCCMD_state[i];
   interrupts();
 
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
-
   // Define throttle depending on the mode
   if ( local_state & ESCCMD_STATE_3D )  {
-    // Check limits
-    if ( ( throttle < ESCCMD_MIN_3D_THROTTLE ) || ( throttle > ESCCMD_MAX_3D_THROTTLE ))
-      ESCCMD_ERROR( ESCCMD_ERROR_PARAM )
-
     // 3D mode
     // 48 - 1047    : positive direction (48 slowest)
     // 1048 - 2047  : negative direction (1048 slowest)
@@ -297,11 +289,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
       ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + ESCCMD_MAX_3D_THROTTLE - throttle;
   }
   else {
-
-    // Check limits
-    if ( ( throttle < 0 ) || ( throttle > ESCCMD_MAX_THROTTLE ))
-      ESCCMD_ERROR( ESCCMD_ERROR_PARAM )
-
     // Default mode
     ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + throttle;
   }
@@ -339,10 +326,6 @@ int ESCCMD_stop( uint8_t i ) {
   noInterrupts();
   local_state = ESCCMD_state[i];
   interrupts();
-
-  // Check if ESC is armed
-  if ( !( local_state & ESCCMD_STATE_ARMED ) )
-    ESCCMD_ERROR( ESCCMD_ERROR_SEQ )
 
   // Set command to stop
   ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
