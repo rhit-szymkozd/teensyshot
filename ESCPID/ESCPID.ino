@@ -42,6 +42,6 @@ void setup() {
 //
 void loop( ) {
   if ( ESCCMD_tic( ) == ESCCMD_TIC_OCCURED )  {
-    ESCCMD_throttle( 0, (int16_t)-1 );
+    ESCCMD_throttle( 0, (int16_t)100 );
   }
 }

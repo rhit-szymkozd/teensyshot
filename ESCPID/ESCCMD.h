@@ -20,7 +20,7 @@
 #define ESCCMD_STATE_START      4                 // Mask for the motor start/stop bit
 
 #define ESCCMD_CMD_REPETITION   10                // Number of time commands have to be repeated to be acknowledged by ESC
-#define ESCCMD_CMD_ARMING_REP   25                // Number of command repetition to arm
+#define ESCCMD_CMD_ARMING_REP   25000                // Number of command repetition to arm
 #define ESCCMD_CMD_DELAY        50                // Delay between two consecutive DSHOT transmissions (us)
 #define ESCCMD_CMD_SAVE_DELAY   250000            // Minimum time to wait after a save command (us)
 
