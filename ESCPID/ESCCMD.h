@@ -30,14 +30,7 @@
                                                   // Maximum missed tics before watchdog is triggered
 #define ESCCMD_THWD_LEVEL       20                // Maximum number of periods without throttle refresh
 
-#define ESCCMD_TLM_UART_SPEED   115200            // Baudrate of the telemetry serial transmission
-#define ESCCMD_TLM_BYTE_TIME    87                // Duration of one byte transmission (us)
 #define ESCCMD_TLM_LENGTH       10                // Number of bytes in the telemetry packet
-#define ESCCMD_TLM_MAX_PEND     1                 // Maximum number of telemetry packet pending
-#define ESCCMD_TLM_NB_POLES     14                // Number of motor poles
-#define ESCCMD_TLM_MAX_TEMP     100               // Maximum ESC temperature (°C)
-#define ESCCMD_TLM_MAX_CRC_ERR  5                 // Maximum CRC errors (per ESCCMD_TLM_PER iterations)
-#define ESCCMD_TLM_MAX_PKT_LOSS 50                // Maximum packet loss (per ESCCMD_TLM_PER iterations)
 #define ESCCMD_TLM_PER          1000              // If 100, error thresholds are in percent     
 
 #define ESCCMD_MAX_THROTTLE     1999              // Max default throttle value

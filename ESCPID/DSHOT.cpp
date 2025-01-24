@@ -320,7 +320,7 @@ void DSHOT_init( int n ) {
 //
 //  Returns an error code in case of failure, 0 otherwise:
 //
-int DSHOT_send( uint16_t *cmd, uint8_t *tlm ) {
+int DSHOT_send( uint16_t *cmd) {
   int       i, j;
   uint16_t  data;
 
@@ -336,7 +336,7 @@ int DSHOT_send( uint16_t *cmd, uint8_t *tlm ) {
     // 11 first MSB = command
     // 12th MSB = telemetry request
     // 4 LSB = CRC
-    data = ( cmd[i] << 5 ) | ( tlm[i] << 4 );
+    data = ( cmd[i] << 5 ) | ( 0 << 4 );
     data |= ( ( data >> 4 ) ^ ( data >> 8 ) ^ ( data >> 12 ) ) & 0x0f;
 
     // Generate DSHOT timings corresponding to the packet

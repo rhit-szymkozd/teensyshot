@@ -11,7 +11,13 @@
 #include <Arduino.h>
 #include "DSHOT.h"
 #include "ESCCMD.h"
-#include "ESCPID.h"
+
+
+// Defines
+#define ESCPID_NB_ESC             1                 // Number of ESCs
+#define ESCPID_MAX_ESC            6                 // Max number of ESCs
+
+#define ESCPID_USB_UART_SPEED     115200            // Baudrate of the teeensy USB serial link
 
 //
 //  Arduino setup function
