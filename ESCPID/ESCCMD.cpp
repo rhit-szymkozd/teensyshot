@@ -12,11 +12,6 @@
 #include "DSHOT.h"
 #include "ESCCMD.h"
 
-// ESC emulation
-//#define ESCCMD_ESC_EMULATION                              // Uncomment to activate ESC emulation
-#define ESCCMD_ESC_EMU_PKT_LOSS                             // Uncomment to emulate packet loss
-#define ESCCMD_ESC_FRACTION_PKTLOSS       300               // One out of x packets lost
-
 // Error handling
 #define ESCCMD_ERROR( code )              { ESCCMD_last_error[i] = code; return code; }
 
@@ -46,34 +41,7 @@ volatile uint8_t    ESCCMD_init_flag = 0;                   // Subsystem initial
 volatile uint8_t    ESCCMD_timer_flag = 0;                  // Periodic loop enable/disable flag
 
 IntervalTimer       ESCCMD_timer;                           // Timer object
-HardwareSerial*     ESCCMD_serial[ESCCMD_NB_UART] = {       // Array of Serial objects
-                                                &Serial1,
-                                                &Serial2,
-                                                &Serial3,
-                                                &Serial4,
-                                                &Serial5,
-                                                &Serial6 };
 uint8_t             ESCCMD_bufferTlm[ESCCMD_NB_UART][ESCCMD_TLM_LENGTH];
-
-#ifdef ESCCMD_ESC_EMULATION
-#define             ESCCMD_EMU_TLM_MAX      5               // Max number of telemetry packets
-#define             ESCCMD_EMU_TLM_DEG      25              // Nominal temperature (deg)
-#define             ESCCMD_EMU_TLM_VOLT     1200            // Nominal voltage (0.01V)
-#define             ESCCMD_EMU_TLM_AMP      2500            // Nominal current (0.01A)
-#define             ESCCMD_EMU_TLM_MAH      1000            // Nominal consumption (mAh)
-#define             ESCCMD_EMU_TLM_RPM      10              // Nominal electrical rpm (100rpm)
-#define             ESCCMD_EMU_TLM_NOISE    3.0             // Percentge of emulated noise (%)
-#define             ESCCMD_EMU_MOTOR_KV     2600            // Kv of the emulated motor
-
-uint8_t             ESCCMD_tlm_emu_nb[ESCCMD_MAX_ESC] = {}; // Number of available packets
-
-uint8_t             ESCCMD_tlm_emu_deg[ESCCMD_EMU_TLM_MAX][ESCCMD_MAX_ESC];
-uint16_t            ESCCMD_tlm_emu_volt[ESCCMD_EMU_TLM_MAX][ESCCMD_MAX_ESC];
-uint16_t            ESCCMD_tlm_emu_amp[ESCCMD_EMU_TLM_MAX][ESCCMD_MAX_ESC];
-uint16_t            ESCCMD_tlm_emu_mah[ESCCMD_EMU_TLM_MAX][ESCCMD_MAX_ESC];
-uint16_t            ESCCMD_tlm_emu_rpm[ESCCMD_EMU_TLM_MAX][ESCCMD_MAX_ESC];
-#endif
-
 
 //
 //  Initialization
@@ -105,11 +73,6 @@ void ESCCMD_init( uint8_t n )  {
     ESCCMD_tlm_pend[i]    = 0;
     ESCCMD_tlm_valid[i]   = 0;
     ESCCMD_tlm_lost_cnt[i]= 0;
-  }
-
-  // Initialize telemetry UART channels
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_serial[i]->begin( ESCCMD_TLM_UART_SPEED );
   }
 
   // Initialize DSHOT generation subsystem
@@ -232,11 +195,6 @@ int ESCCMD_3D_on( void )  {
   // Minimum delay before next command
   delayMicroseconds( ESCCMD_CMD_SAVE_DELAY );
 
-  // Flush incoming serial buffers due to a transcient voltage
-  // appearing on Tx when saving, generating a 0xff serial byte
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_serial[i]->clear( );
-
   // ESC is disarmed after previous delay
   for ( i = 0; i < ESCCMD_n; i++ )
     ESCCMD_state[i] &= ~(ESCCMD_STATE_ARMED);
@@ -313,11 +271,6 @@ int ESCCMD_3D_off( void )  {
   // Minimum delay before next command
   delayMicroseconds( ESCCMD_CMD_SAVE_DELAY );
 
-  // Flush incoming serial buffers due to a transcient voltage
-  // appearing on Tx when saving, generating a 0xff serial byte
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_serial[i]->clear( );
-
   // ESC is disarmed after previous delay
   for ( i = 0; i < ESCCMD_n; i++ )
     ESCCMD_state[i] &= ~(ESCCMD_STATE_ARMED);
@@ -361,7 +314,6 @@ int ESCCMD_start_timer( void )  {
     ESCCMD_CRC_errors[i] = 0;
     ESCCMD_last_error[i]  = 0;
     ESCCMD_throttle_wd[i] = ESCCMD_THWD_LEVEL;
-    ESCCMD_serial[i]->clear( );
   }
 
   ESCCMD_tic_pend = 0;
@@ -471,7 +423,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
     // If watchdog was previously triggered:
     //  Clear UART input buffer
     //  Also clear pending errors, pending packets...
-    ESCCMD_serial[i]->clear( );
     ESCCMD_tlm_pend[i] = 0;
     ESCCMD_tlm_lost_cnt[i] = 0;
     ESCCMD_CRC_errors[i] = 0;
@@ -807,180 +758,6 @@ int ESCCMD_read_rpm( uint8_t i, int16_t *rpm )  {
 }
 
 //
-//  Read next serial packet
-//
-uint8_t *ESCCMD_read_packet( uint8_t i )  {
-  #ifndef ESCCMD_ESC_EMULATION
-  static int      buffer_idx[ESCCMD_NB_UART] = { 0 };
-  static int      serial_ret;
-  #endif
-  
-  #ifdef ESCCMD_ESC_EMULATION
-  uint8_t *pt_c;
-  
-  // Check if a packet is available
-  if ( ESCCMD_tlm_emu_nb[i] )  {
-  
-    ESCCMD_tlm_emu_nb[i]--;
-    
-    pt_c = &ESCCMD_tlm_emu_deg[ESCCMD_tlm_emu_nb[i]][i];
-    ESCCMD_bufferTlm[i][0] = pt_c[0];
-    pt_c = (uint8_t*)&ESCCMD_tlm_emu_volt[ESCCMD_tlm_emu_nb[i]][i];
-    ESCCMD_bufferTlm[i][1] = pt_c[1];
-    ESCCMD_bufferTlm[i][2] = pt_c[0];
-    pt_c = (uint8_t*)&ESCCMD_tlm_emu_amp[ESCCMD_tlm_emu_nb[i]][i];
-    ESCCMD_bufferTlm[i][3] = pt_c[1];
-    ESCCMD_bufferTlm[i][4] = pt_c[0];
-    pt_c = (uint8_t*)&ESCCMD_tlm_emu_mah[ESCCMD_tlm_emu_nb[i]][i];
-    ESCCMD_bufferTlm[i][5] = pt_c[1];
-    ESCCMD_bufferTlm[i][6] = pt_c[0];
-    pt_c = (uint8_t*)&ESCCMD_tlm_emu_rpm[ESCCMD_tlm_emu_nb[i]][i];
-    ESCCMD_bufferTlm[i][7] = pt_c[1];
-    ESCCMD_bufferTlm[i][8] = pt_c[0];
-    ESCCMD_bufferTlm[i][9] = ESCCMD_crc8( ESCCMD_bufferTlm[i], ESCCMD_TLM_LENGTH - 1 );
-    
-    return ESCCMD_bufferTlm[i];
-  }
-  #else
-  // Read all bytes in rx buffer up to packet length
-  while ( ( ESCCMD_serial[i]->available( ) ) && 
-          ( buffer_idx[i] < ESCCMD_TLM_LENGTH ) ) {
-          
-    serial_ret = ESCCMD_serial[i]->read( );
-      
-    if ( serial_ret >= 0 )  {
-      ESCCMD_bufferTlm[i][buffer_idx[i]] = (uint8_t)serial_ret;
-      buffer_idx[i]++;
-    }
-  }
-  
-  // Check if a complete packet has arrived
-  if ( buffer_idx[i] == ESCCMD_TLM_LENGTH  )  {
-    
-    // Reset byte index in packet buffer
-    buffer_idx[i] = 0;
-    
-    // Return pointer to buffer
-    return ESCCMD_bufferTlm[i];
-  }
-  #endif
-
-  return NULL;
-}
-
-//
-// Extract data from the current packet
-//
-int ESCCMD_extract_packet_data( uint8_t i )  {
-
-  // Extract packet data
-        
-  ESCCMD_tlm_deg[i]     =   ESCCMD_bufferTlm[i][0];
-  ESCCMD_tlm_volt[i]    = ( ESCCMD_bufferTlm[i][1] << 8 ) | ESCCMD_bufferTlm[i][2];
-  ESCCMD_tlm_amp[i]     = ( ESCCMD_bufferTlm[i][3] << 8 ) | ESCCMD_bufferTlm[i][4];
-  ESCCMD_tlm_mah[i]     = ( ESCCMD_bufferTlm[i][5] << 8 ) | ESCCMD_bufferTlm[i][6];
-  ESCCMD_tlm_rpm[i]     = ( ESCCMD_bufferTlm[i][7] << 8 ) | ESCCMD_bufferTlm[i][8];
-  ESCCMD_tlm_valid[i]   = ( ESCCMD_bufferTlm[i][9] == ESCCMD_crc8( ESCCMD_bufferTlm[i], ESCCMD_TLM_LENGTH - 1 ) );
-
-  // If crc is invalid, increment crc error counter
-  // and flush UART buffer
-  if ( !ESCCMD_tlm_valid[i] ) {
-
-    ESCCMD_CRC_errors[i]++;
-
-    ESCCMD_last_error[i] = ESCCMD_ERROR_TLM_CRC;
-
-    // Check for excessive CRC errors
-    if ( ESCCMD_CRC_errors[i] >= ESCCMD_TLM_MAX_CRC_ERR ) {
-      ESCCMD_last_error[i] = ESCCMD_ERROR_TLM_CRCMAX;
-    }
-    
-    // Flush UART incoming buffer
-    // If ESC is transmitting, need to wait for some byte(s) to come in
-    do {
-      ESCCMD_serial[i]->clear( );
-      delayMicroseconds( ESCCMD_TLM_BYTE_TIME * 2 );
-    } while ( ESCCMD_serial[i]->available( ) );
-    
-    // Reset pending packet counter
-    ESCCMD_tlm_pend[i] = 0;
-
-    // Reset lost packet counter
-    ESCCMD_tlm_lost_cnt[i] = 0;
-    
-    return ESCCMD_last_error[i];
-  }
-  else {
-    // Make some verifications on the telemetry
-
-    // Check for overtheating of the ESC
-    if ( ESCCMD_tlm_deg[i] >= ESCCMD_TLM_MAX_TEMP ) {
-      ESCCMD_last_error[i] = ESCCMD_ERROR_TLM_TEMP;
-      return ESCCMD_last_error[i];
-    }
-  }
-
-  return 0;
-}
-
-#ifdef ESCCMD_ESC_EMULATION
-//
-//  Emulate telemetry
-//
-void ESCCMD_emulate_tlm( uint8_t i )   {
-  static uint8_t  local_state;
-  
-  // Bufferize emulated telemetry data
-  if ( ESCCMD_tlm_emu_nb[i] < ESCCMD_EMU_TLM_MAX ) {
-    if ( ESCCMD_tlm[i] )  {
-      ESCCMD_tlm_emu_deg[ESCCMD_tlm_emu_nb[i]][i]  = (uint8_t)( ESCCMD_EMU_TLM_DEG *   ( 1.0 + ESCCMD_EMU_TLM_NOISE / 100.0 * (float)( rand( ) - RAND_MAX / 2 ) / ( RAND_MAX / 2 ) ) );
-      ESCCMD_tlm_emu_volt[ESCCMD_tlm_emu_nb[i]][i] = (uint16_t)( ESCCMD_EMU_TLM_VOLT * ( 1.0 + ESCCMD_EMU_TLM_NOISE / 100.0 * (float)( rand( ) - RAND_MAX / 2 ) / ( RAND_MAX / 2 ) ) );
-      ESCCMD_tlm_emu_amp[ESCCMD_tlm_emu_nb[i]][i]  = (uint16_t)( ESCCMD_EMU_TLM_AMP *  ( 1.0 + ESCCMD_EMU_TLM_NOISE / 100.0 * (float)( rand( ) - RAND_MAX / 2 ) / ( RAND_MAX / 2 ) ) );
-      ESCCMD_tlm_emu_mah[ESCCMD_tlm_emu_nb[i]][i]  = (uint16_t)( ESCCMD_EMU_TLM_MAH *  ( 1.0 + ESCCMD_EMU_TLM_NOISE / 100.0 * (float)( rand( ) - RAND_MAX / 2 ) / ( RAND_MAX / 2 ) ) );
-
-      // Define a local copy of the state
-      noInterrupts();
-      local_state = ESCCMD_state[i];
-      interrupts();
-
-      // Compute rpm according to throttle cmd
-      if ( local_state & ESCCMD_STATE_3D )  {
-      
-        // 3D mode
-        if ( ESCCMD_cmd[i] > DSHOT_CMD_MAX + 1 + ESCCMD_MAX_3D_THROTTLE ) {
-          // Negative direction
-          ESCCMD_tlm_emu_rpm[ESCCMD_tlm_emu_nb[i]][i] = (uint16_t)(  (float)( ESCCMD_cmd[i] - ( DSHOT_CMD_MAX + 2 + ESCCMD_MAX_3D_THROTTLE ) ) / ESCCMD_MAX_3D_THROTTLE
-                                                                * (float)( ESCCMD_EMU_TLM_VOLT / 100 ) * ESCCMD_EMU_MOTOR_KV
-                                                                / 100.0 * ESCCMD_TLM_NB_POLES / 2 ); 
-        }
-        else  {
-          // Positive direction
-          ESCCMD_tlm_emu_rpm[ESCCMD_tlm_emu_nb[i]][i] = (uint16_t)(  (float)( ESCCMD_cmd[i] - ( DSHOT_CMD_MAX + 1 ) ) / ESCCMD_MAX_3D_THROTTLE
-                                                                * (float)( ESCCMD_EMU_TLM_VOLT / 100 ) * ESCCMD_EMU_MOTOR_KV
-                                                                / 100.0  * ESCCMD_TLM_NB_POLES / 2 ); 
-        }
-      }
-      else  {
-        // Normal mode
-        ESCCMD_tlm_emu_rpm[ESCCMD_tlm_emu_nb[i]][i] = (uint16_t)(  (float)( ESCCMD_cmd[i] - ( DSHOT_CMD_MAX + 1 ) ) / ESCCMD_MAX_THROTTLE
-                                                                * (float)( ESCCMD_EMU_TLM_VOLT / 100 ) * ESCCMD_EMU_MOTOR_KV
-                                                                / 100.0  * ESCCMD_TLM_NB_POLES / 2 );
-      }
-    }
-    
-    // Increment tlm counter according to packet loss statistics
-    #ifdef ESCCMD_ESC_EMU_PKT_LOSS
-    if ( (int)( ( (float)rand( ) / (float)RAND_MAX * (float)ESCCMD_ESC_FRACTION_PKTLOSS ) ) ) {
-      ESCCMD_tlm_emu_nb[i]++;
-    }
-    #else
-    ESCCMD_tlm_emu_nb[i]++;
-    #endif
-  }
-}
-#endif
-
-//
 //  This routine should be called within the main loop
 //  Returns ESCCMD_TIC_OCCURED when a tic occurs, 
 //  Return 0 otherwise.
@@ -993,45 +770,7 @@ int ESCCMD_tic( void )  {
   if ( !ESCCMD_timer_flag ) {
     return 0;
   }
-    
-  //// Read telemetry
-  
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    
-    // Process all available telemetry packets
-    while ( ESCCMD_read_packet( i ) )  {
-        
-      // Update pending packet counter
-      if ( ESCCMD_tlm_pend[i] ) {
-        ESCCMD_tlm_pend[i]--;
-      }
-      else  {
-        // Spurious packet ?
-        ESCCMD_last_error[i] = ESCCMD_ERROR_TLM_PEND;
-      }
-      
-      // Extract packet data
-      ESCCMD_extract_packet_data( i );
-    }
-        
-    // Check for exceeding packet pending
-    if ( ESCCMD_tlm_pend[i] > ESCCMD_TLM_MAX_PEND ) {
-
-      // Packet is considered as lost: update packet lost counter
-      if ( ESCCMD_tlm_lost_cnt[i] >= ESCCMD_TLM_MAX_PKT_LOSS )  {
-        ESCCMD_last_error[i] = ESCCMD_ERROR_TLM_LOST;
-      }
-      else  {
-        ESCCMD_tlm_lost_cnt[i]++;
-      }
-
-      // Decrement packet pending counter
-      ESCCMD_tlm_pend[i]--;
-    }
-  }
-  
   //// Process clock tics
-  
   noInterrupts();
   local_tic_pend = ESCCMD_tic_pend;
   interrupts();
