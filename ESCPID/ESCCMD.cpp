@@ -25,15 +25,6 @@ uint16_t            ESCCMD_CRC_errors[ESCCMD_MAX_ESC];      // Overall number of
 int8_t              ESCCMD_last_error[ESCCMD_MAX_ESC];      // Last error code
 uint16_t            ESCCMD_cmd[ESCCMD_MAX_ESC];             // Last command
 uint16_t            ESCCMD_throttle_wd[ESCCMD_MAX_ESC];     // Throttle watchdog counter
-uint8_t             ESCCMD_tlm_deg[ESCCMD_MAX_ESC];         // ESC temperature (°C)
-uint16_t            ESCCMD_tlm_volt[ESCCMD_MAX_ESC];        // Voltage of the ESC power supply (0.01V)
-uint16_t            ESCCMD_tlm_amp[ESCCMD_MAX_ESC];         // ESC current (0.01A)
-uint16_t            ESCCMD_tlm_mah[ESCCMD_MAX_ESC];         // ESC consumption (mAh)
-uint16_t            ESCCMD_tlm_rpm[ESCCMD_MAX_ESC];         // ESC electrical rpm (100rpm)
-uint8_t             ESCCMD_tlm[ESCCMD_MAX_ESC];             // Set to 1 when asking for telemetry
-uint8_t             ESCCMD_tlm_pend[ESCCMD_MAX_ESC];        // Flag indicating a pending telemetry data request
-uint8_t             ESCCMD_tlm_valid[ESCCMD_MAX_ESC];       // Flag indicating the validity of telemetry data
-uint8_t             ESCCMD_tlm_lost_cnt[ESCCMD_MAX_ESC];    // Lost packet counter of telemetry data
 uint64_t            ESCCMD_tic_counter = 0;                 // Counts the number of clock iterations
 
 volatile uint16_t   ESCCMD_tic_pend = 0;                    // Number of timer tic waiting for ackowledgement
@@ -56,15 +47,6 @@ void ESCCMD_init( uint8_t n )  {
     ESCCMD_last_error[i]  = 0;
     ESCCMD_cmd[i]         = 0;
     ESCCMD_throttle_wd[i] = 0;
-    ESCCMD_tlm_deg[i]     = 0;
-    ESCCMD_tlm_volt[i]    = 0;
-    ESCCMD_tlm_amp[i]     = 0;
-    ESCCMD_tlm_mah[i]     = 0;
-    ESCCMD_tlm_rpm[i]     = 0;
-    ESCCMD_tlm[i]         = 0;
-    ESCCMD_tlm_pend[i]    = 0;
-    ESCCMD_tlm_valid[i]   = 0;
-    ESCCMD_tlm_lost_cnt[i]= 0;
   }
 
   // Initialize DSHOT generation subsystem
@@ -85,7 +67,6 @@ int ESCCMD_arm_all( void )  {
   // Define stop command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-    ESCCMD_tlm[i] = 0;
   }
 
   // Send command ESCCMD_CMD_ARMING_REP times
@@ -116,7 +97,6 @@ int ESCCMD_3D_on( void )  {
   // Define 3D on command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_3D_MODE_ON;
-    ESCCMD_tlm[i] = 1;
   }
 
   // Send command ESCCMD_CMD_REPETITION times
@@ -132,7 +112,6 @@ int ESCCMD_3D_on( void )  {
   // Define save settings command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_SAVE_SETTINGS;
-    ESCCMD_tlm[i] = 1;
   }
 
   // Send command ESCCMD_CMD_REPETITION times
@@ -170,7 +149,6 @@ int ESCCMD_3D_off( void )  {
   // Define 3D off command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_3D_MODE_OFF;
-    ESCCMD_tlm[i] = 1;
   }
 
   // Send command ESCCMD_CMD_REPETITION times
@@ -186,7 +164,6 @@ int ESCCMD_3D_off( void )  {
   // Define save settings command
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_SAVE_SETTINGS;
-    ESCCMD_tlm[i] = 1;
   }
 
   // Send command ESCCMD_CMD_REPETITION times
@@ -224,9 +201,6 @@ int ESCCMD_start_timer( void )  {
   // Initialize ESC structure and clear UART input buffer
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-    ESCCMD_tlm[i] = 0;
-    ESCCMD_tlm_pend[i] = 0;
-    ESCCMD_tlm_lost_cnt[i] = 0;
     ESCCMD_CRC_errors[i] = 0;
     ESCCMD_last_error[i]  = 0;
     ESCCMD_throttle_wd[i] = ESCCMD_THWD_LEVEL;
@@ -258,7 +232,6 @@ int ESCCMD_stop_timer( void )  {
   // Update ESC state
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-    ESCCMD_tlm[i] = 0;
     ESCCMD_state[i] &= ~( ESCCMD_STATE_ARMED | ESCCMD_STATE_START );
   }
 
@@ -298,7 +271,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
     noInterrupts();
     ESCCMD_state[i] |= ESCCMD_STATE_START;
     interrupts();
-    ESCCMD_tlm[i] = 1;
   }
 
   // Reset the throttle watchdog
@@ -306,8 +278,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
     // If watchdog was previously triggered:
     //  Clear UART input buffer
     //  Also clear pending errors, pending packets...
-    ESCCMD_tlm_pend[i] = 0;
-    ESCCMD_tlm_lost_cnt[i] = 0;
     ESCCMD_CRC_errors[i] = 0;
     ESCCMD_last_error[i]  = 0;
   }
@@ -335,7 +305,6 @@ int ESCCMD_stop( uint8_t i ) {
     noInterrupts();
     ESCCMD_state[i] &= ~ESCCMD_STATE_START;
     interrupts();
-    ESCCMD_tlm[i] = 0;
   }
 
   return 0;
@@ -369,24 +338,7 @@ int ESCCMD_tic( void )  {
       
       // Clear stat counters every ESCCMD_TLM_PER iterations
       for ( i = 0; i < ESCCMD_n; i++ )  {
-        ESCCMD_tlm_lost_cnt[i] = 0;
         ESCCMD_CRC_errors[i] = 0; 
-      }
-    }
-
-    // Check if everything is initialized
-    if ( !ESCCMD_init_flag )  {
-      for ( i = 0; i < ESCCMD_n; i++ )  {
-        ESCCMD_last_error[i] = ESCCMD_ERROR_INIT;
-      }
-      return ESCCMD_TIC_OCCURED;
-    }
-
-    // Check if all ESC are armed
-    for ( i = 0; i < ESCCMD_n; i++ )  {
-      if ( !( ESCCMD_state[i] & ESCCMD_STATE_ARMED ) )  {
-        ESCCMD_last_error[i] = ESCCMD_ERROR_SEQ;
-        return ESCCMD_TIC_OCCURED;
       }
     }
 
@@ -395,9 +347,7 @@ int ESCCMD_tic( void )  {
       if ( ESCCMD_throttle_wd[i] >= ESCCMD_THWD_LEVEL )  {
         // Watchdog triggered on ESC number i
         ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-        ESCCMD_tlm[i] = 0;
         ESCCMD_last_error[i] = 0;
-        ESCCMD_tlm_lost_cnt[i] = 0;
         ESCCMD_CRC_errors[i] = 0;
         noInterrupts();
         ESCCMD_state[i] &= ~( ESCCMD_STATE_START );
