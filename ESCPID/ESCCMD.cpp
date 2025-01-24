@@ -92,7 +92,7 @@ int ESCCMD_arm_all( void )  {
   for ( i = 0; i < ESCCMD_CMD_ARMING_REP; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
+    DSHOT_send( ESCCMD_cmd );
 
     // Wait some time
     delayMicroseconds( 2 * ESCCMD_CMD_DELAY );
@@ -123,7 +123,7 @@ int ESCCMD_3D_on( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
+    DSHOT_send( ESCCMD_cmd );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -139,7 +139,7 @@ int ESCCMD_3D_on( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
+    DSHOT_send( ESCCMD_cmd );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -177,7 +177,7 @@ int ESCCMD_3D_off( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
+    DSHOT_send( ESCCMD_cmd );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -193,7 +193,7 @@ int ESCCMD_3D_off( void )  {
   for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
 
     // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
+    DSHOT_send( ESCCMD_cmd );
 
     // Wait some time
     delayMicroseconds( ESCCMD_CMD_DELAY );
@@ -409,7 +409,7 @@ int ESCCMD_tic( void )  {
     }
 
     // Send current command
-    DSHOT_send( ESCCMD_cmd, ESCCMD_tlm );
+    DSHOT_send( ESCCMD_cmd );
     
     // Inform caller that a clock tic occured
     return ESCCMD_TIC_OCCURED;
