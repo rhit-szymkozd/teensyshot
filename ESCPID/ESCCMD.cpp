@@ -22,13 +22,11 @@ volatile uint8_t    ESCCMD_n;                               // Number of initial
 
 volatile uint8_t    ESCCMD_state[ESCCMD_MAX_ESC];           // Current state of the cmd subsystem
 uint16_t            ESCCMD_CRC_errors[ESCCMD_MAX_ESC];      // Overall number of CRC error since start
-int8_t              ESCCMD_last_error[ESCCMD_MAX_ESC];      // Last error code
 uint16_t            ESCCMD_cmd[ESCCMD_MAX_ESC];             // Last command
 uint16_t            ESCCMD_throttle_wd[ESCCMD_MAX_ESC];     // Throttle watchdog counter
 uint64_t            ESCCMD_tic_counter = 0;                 // Counts the number of clock iterations
 
 volatile uint16_t   ESCCMD_tic_pend = 0;                    // Number of timer tic waiting for ackowledgement
-volatile uint8_t    ESCCMD_timer_flag = 0;                  // Periodic loop enable/disable flag
 
 IntervalTimer       ESCCMD_timer;                           // Timer object
 uint8_t             ESCCMD_bufferTlm[ESCCMD_NB_UART][ESCCMD_TLM_LENGTH];
@@ -42,8 +40,6 @@ void ESCCMD_init( uint8_t n )  {
   // Initialize data arrays to zero
   for ( i = 0; i < ESCCMD_n; i++ ) {
     ESCCMD_state[i]       = 0;
-    ESCCMD_CRC_errors[i]  = 0;
-    ESCCMD_last_error[i]  = 0;
     ESCCMD_cmd[i]         = 0;
     ESCCMD_throttle_wd[i] = 0;
   }
@@ -197,8 +193,6 @@ int ESCCMD_start_timer( void )  {
   // Initialize ESC structure and clear UART input buffer
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-    ESCCMD_CRC_errors[i] = 0;
-    ESCCMD_last_error[i]  = 0;
     ESCCMD_throttle_wd[i] = ESCCMD_THWD_LEVEL;
   }
 
@@ -208,7 +202,6 @@ int ESCCMD_start_timer( void )  {
   ESCCMD_timer.begin( ESCCMD_ISR_timer, ESCCMD_TIMER_PERIOD );
   
   // Raise the timer flag
-  ESCCMD_timer_flag = 1;
 
   return 0;
 }
@@ -223,7 +216,6 @@ int ESCCMD_stop_timer( void )  {
 
   // Stop timer
   ESCCMD_timer.end();
-  ESCCMD_timer_flag = 0;
 
   // Update ESC state
   for ( i = 0; i < ESCCMD_n; i++ )  {
@@ -274,8 +266,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
     // If watchdog was previously triggered:
     //  Clear UART input buffer
     //  Also clear pending errors, pending packets...
-    ESCCMD_CRC_errors[i] = 0;
-    ESCCMD_last_error[i]  = 0;
   }
   ESCCMD_throttle_wd[i] = 0;
 
@@ -330,21 +320,11 @@ int ESCCMD_tic( void )  {
     // Update counters
     ESCCMD_tic_counter++;
     
-    if ( !( ESCCMD_tic_counter % ESCCMD_TLM_PER ) ) {
-      
-      // Clear stat counters every ESCCMD_TLM_PER iterations
-      for ( i = 0; i < ESCCMD_n; i++ )  {
-        ESCCMD_CRC_errors[i] = 0; 
-      }
-    }
-
     // Throttle watchdog
     for ( i = 0; i < ESCCMD_n; i++ )  {
       if ( ESCCMD_throttle_wd[i] >= ESCCMD_THWD_LEVEL )  {
         // Watchdog triggered on ESC number i
         ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-        ESCCMD_last_error[i] = 0;
-        ESCCMD_CRC_errors[i] = 0;
         noInterrupts();
         ESCCMD_state[i] &= ~( ESCCMD_STATE_START );
         interrupts();
@@ -398,15 +378,5 @@ uint8_t ESCCMD_crc8( uint8_t* buf, uint8_t buflen ) {
 void ESCCMD_ISR_timer( void ) {
   static int i;
 
-  // Check for maximum missed tics (ESC watchdog timer = 250ms on a KISS ESC)
-  if ( ESCCMD_tic_pend >= ESCCMD_TIMER_MAX_MISS )  {
-
-    // ESC watchdog switch to disarmed and stopped mode
-    for ( i = 0; i < ESCCMD_n; i++ )  {
-      ESCCMD_state[i] &= ~( ESCCMD_STATE_ARMED | ESCCMD_STATE_START );
-    }
-  }
-  else  {
     ESCCMD_tic_pend++;
-  }
 }
