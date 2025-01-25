@@ -34,10 +34,17 @@ void setup() {
 //  Arduino main loop
 //
 void loop( ) {
-  cmd[0] = 148;
-  DSHOT_send( cmd );
-  delay(1000);
-  cmd[0] = 248;
-  DSHOT_send( cmd );
-  delay(1000);
+  // fast sine wave
+  for (double i = 0; i <= 2*PI; i = i + 0.01) {
+    cmd[0] = (1 - cos(i))*1000/2 + 48;
+    Serial.println(cmd[0]);
+    DSHOT_send( cmd );
+  }
+  // // on/off 2s period
+  // cmd[0] = 2000;
+  // DSHOT_send( cmd );
+  // delay(2000);
+  // cmd[0] = 0;
+  // DSHOT_send( cmd );
+  // delay(2000);
 }
