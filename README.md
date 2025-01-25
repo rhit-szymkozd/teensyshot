@@ -1,3 +1,9 @@
+I whittled away most of the unnecessary code including error checking, host communication, and telemetry. 
+I am using teensy4.0. This code may not work for you.
+
+
+original readme from forked repository below: 
+---------------------------------------------
 # teensySHOT
 - DSHOT communication with ESC using Teensy 3.5 or Teensy 4.0 development boards
 - DSHOT600 is generated using DMA
