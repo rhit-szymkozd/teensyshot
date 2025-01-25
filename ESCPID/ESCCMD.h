@@ -31,16 +31,6 @@
 #define ESCCMD_MIN_3D_THROTTLE  -999              // Min 3D throttle value
 
 #define ESCCMD_BEEP_DURATION    50                // Duration of a beep (ms)
-#define ESCCMD_ERROR_DSHOT      -1                // DSHOT error
-#define ESCCMD_ERROR_SEQ        -2                // Invalid function call sequence error
-#define ESCCMD_ERROR_INIT       -3                // Call of non initialized function
-#define ESCCMD_ERROR_PARAM      -4                // Invalid parameter error
-#define ESCCMD_ERROR_TLM_CRC    -5                // CRC error in telemetry packet
-#define ESCCMD_ERROR_TLM_INVAL  -6                // Invalid telemetry error
-#define ESCCMD_ERROR_TLM_PEND   -7                // Maximum number of pending telemetry packet reached
-#define ESCCMD_ERROR_TLM_TEMP   -8                // Maximum ESC temperature reached
-#define ESCCMD_ERROR_TLM_CRCMAX -9                // Maximum allowed CRC errors reached
-#define ESCCMD_ERROR_TLM_LOST   -10               // Lost packet(s) detected
 
 #define ESCCMD_TIC_OCCURED      1                 // A new timer tic has occured
 

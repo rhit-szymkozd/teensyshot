@@ -12,15 +12,11 @@
 #include "DSHOT.h"
 #include "ESCCMD.h"
 
-// Error handling
-#define ESCCMD_ERROR( code )              { ESCCMD_last_error[i] = code; return code; }
-
 //
 //  Global variables
 //
 volatile uint8_t    ESCCMD_n;                               // Number of initialized outputs
 
-volatile uint8_t    ESCCMD_state[ESCCMD_MAX_ESC];           // Current state of the cmd subsystem
 uint16_t            ESCCMD_CRC_errors[ESCCMD_MAX_ESC];      // Overall number of CRC error since start
 uint16_t            ESCCMD_cmd[ESCCMD_MAX_ESC];             // Last command
 
@@ -36,7 +32,6 @@ void ESCCMD_init( uint8_t n )  {
   ESCCMD_n = n;
   // Initialize data arrays to zero
   for ( i = 0; i < ESCCMD_n; i++ ) {
-    ESCCMD_state[i]       = 0;
     ESCCMD_cmd[i]         = 0;
   }
 
@@ -66,11 +61,6 @@ int ESCCMD_arm_all( void )  {
     // Wait some time
     delayMicroseconds( 2 * ESCCMD_CMD_DELAY );
   }
-
-  // Set the arming flag
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_state[i] |= ESCCMD_STATE_ARMED;
-
   return 0;
 }
 
@@ -100,7 +90,6 @@ int ESCCMD_stop_timer( void )  {
   // Update ESC state
   for ( i = 0; i < ESCCMD_n; i++ )  {
     ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-    ESCCMD_state[i] &= ~( ESCCMD_STATE_ARMED | ESCCMD_STATE_START );
   }
 
   return 0;
@@ -112,34 +101,13 @@ int ESCCMD_stop_timer( void )  {
 //    3D mode     : -999 -> 999
 //
 int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
-  static uint8_t local_state;
 
   // Define a local copy of the state
   noInterrupts();
-  local_state = ESCCMD_state[i];
   interrupts();
 
-  // Define throttle depending on the mode
-  if ( local_state & ESCCMD_STATE_3D )  {
-    // 3D mode
-    // 48 - 1047    : positive direction (48 slowest)
-    // 1048 - 2047  : negative direction (1048 slowest)
-    if ( throttle >= 0 )
-      ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + throttle;
-    else
-      ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + ESCCMD_MAX_3D_THROTTLE - throttle;
-  }
-  else {
-    // Default mode
-    ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + throttle;
-  }
-
-  // Switch start mode on only if needed
-  if ( !( local_state & ESCCMD_STATE_START ) ) {
-    noInterrupts();
-    ESCCMD_state[i] |= ESCCMD_STATE_START;
-    interrupts();
-  }
+  // Default mode
+  ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + throttle;
 
   return 0;
 }
@@ -148,22 +116,12 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
 //  Stop motor number i
 //
 int ESCCMD_stop( uint8_t i ) {
-  static uint8_t local_state;
-
   // Define a local copy of the state
   noInterrupts();
-  local_state = ESCCMD_state[i];
   interrupts();
 
   // Set command to stop
   ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-
-  // Switch start mode off only if needed
-  if ( local_state & ESCCMD_STATE_START  ) {
-    noInterrupts();
-    ESCCMD_state[i] &= ~ESCCMD_STATE_START;
-    interrupts();
-  }
 
   return 0;
 }
