@@ -23,7 +23,6 @@ volatile uint8_t    ESCCMD_n;                               // Number of initial
 volatile uint8_t    ESCCMD_state[ESCCMD_MAX_ESC];           // Current state of the cmd subsystem
 uint16_t            ESCCMD_CRC_errors[ESCCMD_MAX_ESC];      // Overall number of CRC error since start
 uint16_t            ESCCMD_cmd[ESCCMD_MAX_ESC];             // Last command
-uint16_t            ESCCMD_throttle_wd[ESCCMD_MAX_ESC];     // Throttle watchdog counter
 uint64_t            ESCCMD_tic_counter = 0;                 // Counts the number of clock iterations
 
 volatile uint16_t   ESCCMD_tic_pend = 0;                    // Number of timer tic waiting for ackowledgement
@@ -41,7 +40,6 @@ void ESCCMD_init( uint8_t n )  {
   for ( i = 0; i < ESCCMD_n; i++ ) {
     ESCCMD_state[i]       = 0;
     ESCCMD_cmd[i]         = 0;
-    ESCCMD_throttle_wd[i] = 0;
   }
 
   // Initialize DSHOT generation subsystem
@@ -188,21 +186,9 @@ int ESCCMD_3D_off( void )  {
 //  Return values: see defines
 //
 int ESCCMD_start_timer( void )  {
-  static int i;
-
-  // Initialize ESC structure and clear UART input buffer
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-    ESCCMD_throttle_wd[i] = ESCCMD_THWD_LEVEL;
-  }
-
   ESCCMD_tic_pend = 0;
-
   // Initialize timer
   ESCCMD_timer.begin( ESCCMD_ISR_timer, ESCCMD_TIMER_PERIOD );
-  
-  // Raise the timer flag
-
   return 0;
 }
 
@@ -261,14 +247,6 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
     interrupts();
   }
 
-  // Reset the throttle watchdog
-  if ( ESCCMD_throttle_wd[i] >= ESCCMD_THWD_LEVEL ) {
-    // If watchdog was previously triggered:
-    //  Clear UART input buffer
-    //  Also clear pending errors, pending packets...
-  }
-  ESCCMD_throttle_wd[i] = 0;
-
   return 0;
 }
 
@@ -302,7 +280,6 @@ int ESCCMD_stop( uint8_t i ) {
 //  Return 0 otherwise.
 //
 int ESCCMD_tic( void )  {
-  static int      i;
   static uint16_t local_tic_pend;
  
   //// Process clock tics
@@ -320,20 +297,6 @@ int ESCCMD_tic( void )  {
     // Update counters
     ESCCMD_tic_counter++;
     
-    // Throttle watchdog
-    for ( i = 0; i < ESCCMD_n; i++ )  {
-      if ( ESCCMD_throttle_wd[i] >= ESCCMD_THWD_LEVEL )  {
-        // Watchdog triggered on ESC number i
-        ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-        noInterrupts();
-        ESCCMD_state[i] &= ~( ESCCMD_STATE_START );
-        interrupts();
-      }
-      else {
-        ESCCMD_throttle_wd[i]++;
-      }
-    }
-
     // Send current command
     DSHOT_send( ESCCMD_cmd );
     
@@ -376,7 +339,5 @@ uint8_t ESCCMD_crc8( uint8_t* buf, uint8_t buflen ) {
 //  Timer ISR
 //
 void ESCCMD_ISR_timer( void ) {
-  static int i;
-
-    ESCCMD_tic_pend++;
+  ESCCMD_tic_pend++;
 }
