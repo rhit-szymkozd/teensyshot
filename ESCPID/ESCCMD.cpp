@@ -28,7 +28,6 @@ uint16_t            ESCCMD_throttle_wd[ESCCMD_MAX_ESC];     // Throttle watchdog
 uint64_t            ESCCMD_tic_counter = 0;                 // Counts the number of clock iterations
 
 volatile uint16_t   ESCCMD_tic_pend = 0;                    // Number of timer tic waiting for ackowledgement
-volatile uint8_t    ESCCMD_init_flag = 0;                   // Subsystem initialization flag
 volatile uint8_t    ESCCMD_timer_flag = 0;                  // Periodic loop enable/disable flag
 
 IntervalTimer       ESCCMD_timer;                           // Timer object
@@ -51,9 +50,6 @@ void ESCCMD_init( uint8_t n )  {
 
   // Initialize DSHOT generation subsystem
   DSHOT_init( ESCCMD_n );
-
-  // Set the initialization flag
-  ESCCMD_init_flag = 1;
 }
 
 //
