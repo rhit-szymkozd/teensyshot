@@ -10,8 +10,6 @@
 // Includes
 #include <Arduino.h>
 #include "DSHOT.h"
-#include "ESCCMD.h"
-
 
 // Defines
 #define ESCPID_NB_ESC             1                 // Number of ESCs
@@ -29,8 +27,8 @@ void setup() {
   // Initialize USB serial link
   Serial.begin( ESCPID_USB_UART_SPEED );
 
-  // Initialize the CMD subsystem
-  ESCCMD_init( ESCPID_NB_ESC );
+  // Initialize DSHOT generation subsystem
+  DSHOT_init( ESCPID_NB_ESC );
 
   DSHOT_send( cmd );
   delay(5000);
