@@ -13,10 +13,7 @@
 
 // Defines
 #define ESCPID_NB_ESC             1                 // Number of ESCs
-#define ESCPID_MAX_ESC            6                 // Max number of ESCs
-
 #define ESCPID_USB_UART_SPEED     115200            // Baudrate of the teeensy USB serial link
-
 
 uint16_t cmd[] = {0, 0, 0, 0, 0, 0};
 
@@ -24,7 +21,6 @@ uint16_t cmd[] = {0, 0, 0, 0, 0, 0};
 //  Arduino setup function
 //
 void setup() {
-  // Initialize USB serial link
   Serial.begin( ESCPID_USB_UART_SPEED );
 
   // Initialize DSHOT generation subsystem

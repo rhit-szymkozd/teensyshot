@@ -134,11 +134,7 @@ void (*DSHOT_DMA_ISR[6])()  = { DSHOT_DMA_interrupt_routine_0,
  */
 void DSHOT_init( int n ) {
   int i, j;
-
-  if ( n <= DSHOT_MAX_OUTPUTS )
-    DSHOT_n = n;
-  else
-    DSHOT_n = DSHOT_MAX_OUTPUTS;
+  DSHOT_n = n;
 
   // Initialize DMA data
   for ( i = 0; i < DSHOT_n; i++ ) {
@@ -244,11 +240,6 @@ int DSHOT_send( uint16_t *cmd) {
   IMXRT_FLEXPWM2.MCTRL |= FLEXPWM_MCTRL_RUN(15); 
   IMXRT_FLEXPWM1.MCTRL |= FLEXPWM_MCTRL_RUN(15); 
   IMXRT_FLEXPWM4.MCTRL |= FLEXPWM_MCTRL_RUN(15); 
-  /*
-  for ( i = 0; i < DSHOT_n; i++ ) {
-    (*DSHOT_mods[i]).MCTRL |= FLEXPWM_MCTRL_RUN( 1 << DSHOT_sm[i] ); 
-  }
-*/
 
   // Wait the theoretical time needed by DMA + some margin
   delayMicroseconds( (unsigned int)( ( DSHOT_BT_DURATION * ( DSHOT_DMA_LENGTH + DSHOT_DMA_MARGIN ) ) / 1000 ) );
