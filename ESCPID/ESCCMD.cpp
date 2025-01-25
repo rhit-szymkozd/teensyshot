@@ -74,13 +74,3 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
   ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + throttle;
   return 0;
 }
-
-//
-//  Stop motor number i
-//
-int ESCCMD_stop( uint8_t i ) {
-  // Set command to stop
-  ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-
-  return 0;
-}
