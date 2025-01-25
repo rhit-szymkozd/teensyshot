@@ -74,8 +74,6 @@ int     ESCCMD_stop_timer( void );
 int     ESCCMD_throttle( uint8_t, int16_t );
 int     ESCCMD_stop( uint8_t );
 int     ESCCMD_tic( void );
-uint8_t ESCCMD_update_crc8( uint8_t, uint8_t );
-uint8_t ESCCMD_crc8( uint8_t*, uint8_t );
 void    ESCCMD_ISR_timer( void );
 
 #endif

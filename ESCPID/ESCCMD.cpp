@@ -157,34 +157,6 @@ int ESCCMD_tic( void )  {
 }
 
 //
-// crc8 calculation
-//
-uint8_t ESCCMD_update_crc8( uint8_t crc, uint8_t crc_seed ) {
-  static uint8_t crc_u;
-
-  crc_u = crc;
-  crc_u ^= crc_seed;
-
-  for ( int i = 0; i < 8; i++ ) {
-    crc_u = ( crc_u & 0x80 ) ? 0x7 ^ ( crc_u << 1 ) : ( crc_u << 1 );
-  }
-
-  return crc_u;
-}
-
-uint8_t ESCCMD_crc8( uint8_t* buf, uint8_t buflen ) {
-  static uint8_t crc;
-
-  crc = 0;
-
-  for ( int i = 0; i < buflen; i++ ) {
-    crc = ESCCMD_update_crc8( buf[i], crc );
-  }
-
-  return crc;
-}
-
-//
 //  Timer ISR
 //
 void ESCCMD_ISR_timer( void ) {
