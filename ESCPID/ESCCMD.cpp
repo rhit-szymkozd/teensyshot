@@ -23,12 +23,10 @@ volatile uint8_t    ESCCMD_n;                               // Number of initial
 volatile uint8_t    ESCCMD_state[ESCCMD_MAX_ESC];           // Current state of the cmd subsystem
 uint16_t            ESCCMD_CRC_errors[ESCCMD_MAX_ESC];      // Overall number of CRC error since start
 uint16_t            ESCCMD_cmd[ESCCMD_MAX_ESC];             // Last command
-uint64_t            ESCCMD_tic_counter = 0;                 // Counts the number of clock iterations
 
 volatile uint16_t   ESCCMD_tic_pend = 0;                    // Number of timer tic waiting for ackowledgement
 
 IntervalTimer       ESCCMD_timer;                           // Timer object
-uint8_t             ESCCMD_bufferTlm[ESCCMD_NB_UART][ESCCMD_TLM_LENGTH];
 
 //
 //  Initialization
@@ -72,110 +70,6 @@ int ESCCMD_arm_all( void )  {
   // Set the arming flag
   for ( i = 0; i < ESCCMD_n; i++ )
     ESCCMD_state[i] |= ESCCMD_STATE_ARMED;
-
-  return 0;
-}
-
-//
-//  Activate 3D mode
-//
-//  Return values: see defines
-//
-int ESCCMD_3D_on( void )  {
-  static int i;
-
-  // Define 3D on command
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_cmd[i] = DSHOT_CMD_3D_MODE_ON;
-  }
-
-  // Send command ESCCMD_CMD_REPETITION times
-  for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
-
-    // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd );
-
-    // Wait some time
-    delayMicroseconds( ESCCMD_CMD_DELAY );
-  }
-
-  // Define save settings command
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_cmd[i] = DSHOT_CMD_SAVE_SETTINGS;
-  }
-
-  // Send command ESCCMD_CMD_REPETITION times
-  for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
-
-    // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd );
-
-    // Wait some time
-    delayMicroseconds( ESCCMD_CMD_DELAY );
-  }
-
-  // Set the 3D mode flag
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_state[i] |= ESCCMD_STATE_3D;
-
-  // Minimum delay before next command
-  delayMicroseconds( ESCCMD_CMD_SAVE_DELAY );
-
-  // ESC is disarmed after previous delay
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_state[i] &= ~(ESCCMD_STATE_ARMED);
-
-  return 0;
-}
-
-//
-//  Deactivate 3D mode
-//
-//  Return values: see defines
-//
-int ESCCMD_3D_off( void )  {
-  static int i;
-
-  // Define 3D off command
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_cmd[i] = DSHOT_CMD_3D_MODE_OFF;
-  }
-
-  // Send command ESCCMD_CMD_REPETITION times
-  for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
-
-    // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd );
-
-    // Wait some time
-    delayMicroseconds( ESCCMD_CMD_DELAY );
-  }
-
-  // Define save settings command
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_cmd[i] = DSHOT_CMD_SAVE_SETTINGS;
-  }
-
-  // Send command ESCCMD_CMD_REPETITION times
-  for ( i = 0; i < ESCCMD_CMD_REPETITION; i++ )  {
-
-    // Send DSHOT signal to all ESCs
-    DSHOT_send( ESCCMD_cmd );
-
-    // Wait some time
-    delayMicroseconds( ESCCMD_CMD_DELAY );
-  }
-
-  // Clear the 3D mode flag
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_state[i] &= ~(ESCCMD_STATE_3D);
-
-  // Minimum delay before next command
-  delayMicroseconds( ESCCMD_CMD_SAVE_DELAY );
-
-  // ESC is disarmed after previous delay
-  for ( i = 0; i < ESCCMD_n; i++ )
-    ESCCMD_state[i] &= ~(ESCCMD_STATE_ARMED);
 
   return 0;
 }
@@ -294,9 +188,6 @@ int ESCCMD_tic( void )  {
     ESCCMD_tic_pend--;
     interrupts();
 
-    // Update counters
-    ESCCMD_tic_counter++;
-    
     // Send current command
     DSHOT_send( ESCCMD_cmd );
     

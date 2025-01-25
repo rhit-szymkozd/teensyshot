@@ -10,10 +10,6 @@
 
 // Defines
 #define ESCCMD_MAX_ESC          DSHOT_MAX_OUTPUTS // Max number of ESCs
-#define ESCCMD_NB_UART          6                 // Number of UARTS available
-#if ESCCMD_NB_UART < ESCCMD_MAX_ESC
-  #error ESCCMD_NB_UART should be >= ESCCMD_MAX_ESC
-#endif
 
 #define ESCCMD_STATE_ARMED      1                 // Mask for the arming flag
 #define ESCCMD_STATE_3D         2                 // Mask for the default/3D mode
@@ -29,9 +25,6 @@
 #define ESCCMD_TIMER_MAX_MISS   ( ESCCMD_ESC_WATCHDOG / ESCCMD_TIMER_PERIOD )
                                                   // Maximum missed tics before watchdog is triggered
 #define ESCCMD_THWD_LEVEL       20                // Maximum number of periods without throttle refresh
-
-#define ESCCMD_TLM_LENGTH       10                // Number of bytes in the telemetry packet
-#define ESCCMD_TLM_PER          1000              // If 100, error thresholds are in percent     
 
 #define ESCCMD_MAX_THROTTLE     1999              // Max default throttle value
 #define ESCCMD_MAX_3D_THROTTLE  999               // Max 3D throttle value
@@ -86,22 +79,10 @@ typedef enum {
 // Function prototypes
 void    ESCCMD_init( uint8_t );
 int     ESCCMD_arm_all( void );
-int     ESCCMD_3D_on( void );
-int     ESCCMD_3D_off( void );
 int     ESCCMD_start_timer( void );
 int     ESCCMD_stop_timer( void );
 int     ESCCMD_throttle( uint8_t, int16_t );
 int     ESCCMD_stop( uint8_t );
-int     ESCCMD_read_err( uint8_t, int8_t* );
-int     ESCCMD_read_cmd( uint8_t, uint16_t* );
-int     ESCCMD_read_tlm_status( uint8_t );
-int     ESCCMD_read_deg( uint8_t, uint8_t* );
-int     ESCCMD_read_volt( uint8_t, uint16_t* );
-int     ESCCMD_read_amp( uint8_t, uint16_t* );
-int     ESCCMD_read_mah( uint8_t, uint16_t* );
-int     ESCCMD_read_rpm( uint8_t, int16_t* );
-uint8_t *ESCCMD_read_packet( uint8_t );
-int     ESCCMD_extract_packet_data( uint8_t );
 int     ESCCMD_tic( void );
 uint8_t ESCCMD_update_crc8( uint8_t, uint8_t );
 uint8_t ESCCMD_crc8( uint8_t*, uint8_t );
