@@ -10,44 +10,34 @@
 // Includes
 #include <Arduino.h>
 #include "DSHOT.h"
-#include "ESCCMD.h"
-
 
 // Defines
 #define ESCPID_NB_ESC             1                 // Number of ESCs
-#define ESCPID_MAX_ESC            6                 // Max number of ESCs
-
 #define ESCPID_USB_UART_SPEED     115200            // Baudrate of the teeensy USB serial link
+
+uint16_t cmd[] = {0, 0, 0, 0, 0, 0};
 
 //
 //  Arduino setup function
 //
 void setup() {
-  int i;
-
-  // Initialize USB serial link
   Serial.begin( ESCPID_USB_UART_SPEED );
 
-  // Initialize the CMD subsystem
-  ESCCMD_init( ESCPID_NB_ESC );
+  // Initialize DSHOT generation subsystem
+  DSHOT_init( ESCPID_NB_ESC );
 
-  // Arming ESCs
-  ESCCMD_arm_all( );
-  
-  // Start periodic loop
-  ESCCMD_start_timer( );
-  
-  // Stop all motors
-  for ( i = 0; i < ESCPID_NB_ESC; i++ ) {
-    ESCCMD_stop( i );
-  }
+  DSHOT_send( cmd );
+  delay(5000);
 }
 
 //
 //  Arduino main loop
 //
 void loop( ) {
-  if ( ESCCMD_tic( ) == ESCCMD_TIC_OCCURED )  {
-    ESCCMD_throttle( 0, (int16_t)100 );
-  }
+  cmd[0] = 148;
+  DSHOT_send( cmd );
+  delay(1000);
+  cmd[0] = 248;
+  DSHOT_send( cmd );
+  delay(1000);
 }

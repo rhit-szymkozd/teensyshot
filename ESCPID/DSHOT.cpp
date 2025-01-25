@@ -16,11 +16,7 @@
  *  Constants
  */
 
-#if defined(__IMXRT1062__) // teensy 4.0
-  #define F_TMR F_BUS_ACTUAL
-#else // teensy 3.5
-  #define F_TMR F_BUS
-#endif
+#define F_TMR F_BUS_ACTUAL
 
 /* Defining DSHOT600 timings expressed in F_TMR periods
  * DSHOT600 has the following timings:
@@ -47,8 +43,6 @@ const uint16_t DSHOT_bit_length   = uint64_t(F_TMR) * DSHOT_BT_DURATION / 100000
 
 // Number of initialized DSHOT outputs
 uint8_t             DSHOT_n;
-
-#if defined(__IMXRT1062__) // teensy 4.0
 
 // DMA eFlexPWM modules
 volatile IMXRT_FLEXPWM_t  *DSHOT_mods[DSHOT_NB_DMA_CHAN]  = { &IMXRT_FLEXPWM2, 
@@ -104,42 +98,11 @@ volatile uint8_t          DSHOT_dmamux[DSHOT_NB_DMA_CHAN] = { DMAMUX_SOURCE_FLEX
                                                               DMAMUX_SOURCE_FLEXPWM2_WRITE2
                                                             };
 
-#else // teensy 3.5
-
-// DMA FTM channel values references
-volatile uint32_t*  DSHOT_DMA_chan_teensy[DSHOT_NB_DMA_CHAN] ={   &FTM0_C0V,
-                                                                  &FTM0_C1V,
-                                                                  &FTM0_C4V,
-                                                                  &FTM0_C5V,
-                                                                  &FTM0_C6V,
-                                                                  &FTM0_C7V };
-
-// DMA FTM channel status and control register
-volatile uint32_t*  DSHOT_DMA_chsc_teensy[DSHOT_NB_DMA_CHAN] ={   &FTM0_C0SC,
-                                                                  &FTM0_C1SC,
-                                                                  &FTM0_C4SC,
-                                                                  &FTM0_C5SC,
-                                                                  &FTM0_C6SC,
-                                                                  &FTM0_C7SC };
-
-
-// Output pins
-volatile uint32_t*  DSHOT_DMA_pin_teensy[DSHOT_NB_DMA_CHAN] ={    &CORE_PIN22_CONFIG,
-                                                                  &CORE_PIN23_CONFIG,
-                                                                  &CORE_PIN6_CONFIG,
-                                                                  &CORE_PIN20_CONFIG,
-                                                                  &CORE_PIN21_CONFIG,
-                                                                  &CORE_PIN5_CONFIG };
-
-#endif
-
 // DMA objects
 DMAChannel          dma[DSHOT_MAX_OUTPUTS];
 
 // DMA data
 volatile uint16_t   DSHOT_dma_data[DSHOT_MAX_OUTPUTS][DSHOT_DMA_LENGTH];
-
-#if defined(__IMXRT1062__) // teensy 4.0
 
 /* 
  * DMA termination interrupt service routine (ISR) for each DMA channel
@@ -165,32 +128,13 @@ void (*DSHOT_DMA_ISR[6])()  = { DSHOT_DMA_interrupt_routine_0,
                                 DSHOT_DMA_interrupt_routine_5
                               };
 
-#else // teensy 3.5
-
-/*
- *  DMA termination interrupt service routine (ISR)
- */
-void DSHOT_DMA_interrupt_routine( void ) {
-
-  dma[0].clearInterrupt( );
-
-  // Disable FTM0
-  FTM0_SC = 0;
-}
-
-#endif
-
 /*
  *  Initialize the DMA hardware in order to be able
  *  to generate 6 DSHOT outputs.
  */
 void DSHOT_init( int n ) {
   int i, j;
-
-  if ( n <= DSHOT_MAX_OUTPUTS )
-    DSHOT_n = n;
-  else
-    DSHOT_n = DSHOT_MAX_OUTPUTS;
+  DSHOT_n = n;
 
   // Initialize DMA data
   for ( i = 0; i < DSHOT_n; i++ ) {
@@ -198,8 +142,6 @@ void DSHOT_init( int n ) {
       DSHOT_dma_data[i][j] = 0;
     }
   }
-
-#if defined(__IMXRT1062__) // teensy 4.0
 
   // Configure pins on the board as DSHOT outputs
   // These pins are configured as eFlexPWM (FLEXPWMn) PWM outputs
@@ -256,61 +198,6 @@ void DSHOT_init( int n ) {
     dma[i].enable( );
   }
 
-#else
-
-  // Configure pins on the board as DSHOT outputs
-  // These pins are configured as FlexTimer (FTM0) PWM outputs
-  // PORT_PCR_DSE: high current output
-  // PORT_PCR_SRE: slow slew rate
-  for ( i = 0; i < DSHOT_n; i++ ) {
-    *DSHOT_DMA_pin_teensy[i] = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
-  }
-
-  // First DMA channel is the only one triggered by the bit clock
-  dma[0].sourceBuffer( DSHOT_dma_data[0], DSHOT_DMA_LENGTH * sizeof( uint16_t ) );
-  dma[0].destination( (uint16_t&) *DSHOT_DMA_chan_teensy[0] );
-  dma[0].triggerAtHardwareEvent( DMAMUX_SOURCE_FTM0_CH2 );
-  dma[0].interruptAtCompletion( );
-  dma[0].attachInterrupt( DSHOT_DMA_interrupt_routine );
-  dma[0].enable( );
-
-  // Other DMA channels are trigered by the previoux DMA channel
-  for ( i = 1; i < DSHOT_n; i++ ) {
-    dma[i].sourceBuffer( DSHOT_dma_data[i], DSHOT_DMA_LENGTH * sizeof( uint16_t ) );
-    dma[i].destination( (uint16_t&) *DSHOT_DMA_chan_teensy[i] );
-    dma[i].triggerAtTransfersOf( dma[i-1] );
-    dma[i].triggerAtCompletionOf( dma[i-1] );
-    dma[i].enable( );
-  }
-
-  // FTM0_CNSC: status and control register
-  // FTM_CSC_MSB | FTM_CSC_ELSB:
-  // edge aligned PWM with high-true pulses
-  for ( i = 0; i < DSHOT_n; i++ ) {
-    *DSHOT_DMA_chsc_teensy[i] = FTM_CSC_MSB | FTM_CSC_ELSB;
-  }
-
-  // FTM0_CNV = 0: initialize the counter channel N at 0
-  for ( i = 0; i < DSHOT_n; i++ ) {
-    *DSHOT_DMA_chan_teensy[i] = 0;
-  }
-
-  // FTM0 channel 2 is the main clock
-  // FTM_CSC_CHIE: enable interrupt
-  // FTM_CSC_DMA: enable DMA
-  // FTM_CSC_MSA: toggle output on match
-  // FTM0_C2V = 0: initialize the counter channel 2 at 0
-  FTM0_C2SC = FTM_CSC_CHIE | FTM_CSC_DMA | FTM_CSC_MSA | FTM_CSC_ELSA;
-  FTM0_C2V = 0;
-
-  // Initialize FTM0
-  FTM0_SC = 0;                  // Disable FTM0
-  FTM0_CNT = 0;                 // Contains the FTM counter value
-  FTM0_MOD = DSHOT_bit_length;  // The modulo value for the FTM counter
-  FTM0_CNTIN = 0;               // Counter initial value
-
-#endif
-
 }
 
 //
@@ -326,12 +213,6 @@ int DSHOT_send( uint16_t *cmd) {
 
   // Initialize DMA buffers
   for ( i = 0; i < DSHOT_n; i++ ) {
-
-    // Check cmd value
-    if ( cmd[i] > DSHOT_MAX_VALUE ) {
-      return DSHOT_ERROR_RANGE;
-    }
-
     // Compute the packet to send
     // 11 first MSB = command
     // 12th MSB = telemetry request
@@ -354,47 +235,13 @@ int DSHOT_send( uint16_t *cmd) {
     dma[i].clearError( );
   }
 
-#if defined(__IMXRT1062__) // teensy 4.0
-
   // Start DMA by activating the clocks
   // Clocks are disabled again by the DMA ISRs
   IMXRT_FLEXPWM2.MCTRL |= FLEXPWM_MCTRL_RUN(15); 
   IMXRT_FLEXPWM1.MCTRL |= FLEXPWM_MCTRL_RUN(15); 
   IMXRT_FLEXPWM4.MCTRL |= FLEXPWM_MCTRL_RUN(15); 
-  /*
-  for ( i = 0; i < DSHOT_n; i++ ) {
-    (*DSHOT_mods[i]).MCTRL |= FLEXPWM_MCTRL_RUN( 1 << DSHOT_sm[i] ); 
-  }
-*/
-#else
-
-  // Start DMA by activating the clock
-  // The clock is disabled again by the DMA interrupt on channel 0
-  FTM0_SC = FTM_SC_CLKS(1);
-
-#endif
 
   // Wait the theoretical time needed by DMA + some margin
   delayMicroseconds( (unsigned int)( ( DSHOT_BT_DURATION * ( DSHOT_DMA_LENGTH + DSHOT_DMA_MARGIN ) ) / 1000 ) );
-
-#if !defined(__IMXRT1062__) // teensy 3.5
-
-  // Check if FMT0 was disabled by the DMA ISR
-  // Check only bits 3 and 4: non null if a clock source is set
-  // TODO: test this error code
-  if ( FTM0_SC & (3 << 3) ) {
-    return DSHOT_ERROR_TIMEOUT;
-  }
-
-#endif
-
-  // Check if there is a DMA error
-  // TODO: test this error code
-  for ( i = 0; i < DSHOT_n; i++ ) {
-    if ( dma[i].error( ) ) {
-      return DSHOT_ERROR_DMA;
-    }
-  }
-
   return 0;
 }
