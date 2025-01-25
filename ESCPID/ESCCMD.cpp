@@ -65,50 +65,13 @@ int ESCCMD_arm_all( void )  {
 }
 
 //
-//  Start periodic loop. ESC should be armed.
-//
-//  Return values: see defines
-//
-int ESCCMD_start_timer( void )  {
-  ESCCMD_tic_pend = 0;
-  // Initialize timer
-  ESCCMD_timer.begin( ESCCMD_ISR_timer, ESCCMD_TIMER_PERIOD );
-  return 0;
-}
-
-//
-//  Stop periodic loop. ESC should be armed.
-//
-//  Return values: see defines
-//
-int ESCCMD_stop_timer( void )  {
-  static int i;
-
-  // Stop timer
-  ESCCMD_timer.end();
-
-  // Update ESC state
-  for ( i = 0; i < ESCCMD_n; i++ )  {
-    ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
-  }
-
-  return 0;
-}
-
-//
 //  Define throttle of ESC number i:
 //    Default mode: 0 -> 1999
 //    3D mode     : -999 -> 999
 //
 int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
-
-  // Define a local copy of the state
-  noInterrupts();
-  interrupts();
-
   // Default mode
   ESCCMD_cmd[i] = DSHOT_CMD_MAX + 1 + throttle;
-
   return 0;
 }
 
@@ -116,49 +79,8 @@ int ESCCMD_throttle( uint8_t i, int16_t throttle ) {
 //  Stop motor number i
 //
 int ESCCMD_stop( uint8_t i ) {
-  // Define a local copy of the state
-  noInterrupts();
-  interrupts();
-
   // Set command to stop
   ESCCMD_cmd[i] = DSHOT_CMD_MOTOR_STOP;
 
   return 0;
-}
-
-//
-//  This routine should be called within the main loop
-//  Returns ESCCMD_TIC_OCCURED when a tic occurs, 
-//  Return 0 otherwise.
-//
-int ESCCMD_tic( void )  {
-  static uint16_t local_tic_pend;
- 
-  //// Process clock tics
-  noInterrupts();
-  local_tic_pend = ESCCMD_tic_pend;
-  interrupts();
-
-  if ( local_tic_pend ) {
-
-    // Acknowledgement of one timer clock event
-    noInterrupts();
-    ESCCMD_tic_pend--;
-    interrupts();
-
-    // Send current command
-    DSHOT_send( ESCCMD_cmd );
-    
-    // Inform caller that a clock tic occured
-    return ESCCMD_TIC_OCCURED;
-  }
-
-  return 0;
-}
-
-//
-//  Timer ISR
-//
-void ESCCMD_ISR_timer( void ) {
-  ESCCMD_tic_pend++;
 }

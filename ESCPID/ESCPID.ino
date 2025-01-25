@@ -34,9 +34,6 @@ void setup() {
   // Arming ESCs
   ESCCMD_arm_all( );
   
-  // Start periodic loop
-  ESCCMD_start_timer( );
-  
   // Stop all motors
   for ( i = 0; i < ESCPID_NB_ESC; i++ ) {
     ESCCMD_stop( i );
@@ -47,7 +44,6 @@ void setup() {
 //  Arduino main loop
 //
 void loop( ) {
-  if ( ESCCMD_tic( ) == ESCCMD_TIC_OCCURED )  {
-    ESCCMD_throttle( 0, (int16_t)100 );
-  }
+  uint16_t ESCCMD_cmd[] = {148, 0, 0, 0, 0, 0};
+  DSHOT_send( ESCCMD_cmd );
 }
